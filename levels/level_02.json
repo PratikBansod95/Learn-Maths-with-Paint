@@ -1,0 +1,54 @@
+{
+  "id": "level_02",
+  "title": "Fruit Bowl",
+  "image": "/assets/levels/level_02.svg",
+  "imageSize": { "width": 512, "height": 512 },
+  "regions": [
+    {
+      "id": "r_apple",
+      "label": 14,
+      "points": [
+        { "x": 96, "y": 196 },
+        { "x": 200, "y": 196 },
+        { "x": 200, "y": 300 },
+        { "x": 96, "y": 300 }
+      ]
+    },
+    {
+      "id": "r_orange",
+      "label": 16,
+      "points": [
+        { "x": 208, "y": 204 },
+        { "x": 304, "y": 204 },
+        { "x": 304, "y": 300 },
+        { "x": 208, "y": 300 }
+      ]
+    },
+    {
+      "id": "r_banana",
+      "label": 22,
+      "points": [
+        { "x": 312, "y": 148 },
+        { "x": 420, "y": 148 },
+        { "x": 420, "y": 296 },
+        { "x": 312, "y": 296 }
+      ]
+    },
+    {
+      "id": "r_bowl",
+      "label": 28,
+      "points": [
+        { "x": 88, "y": 296 },
+        { "x": 424, "y": 296 },
+        { "x": 424, "y": 380 },
+        { "x": 88, "y": 380 }
+      ]
+    }
+  ],
+  "tasks": [
+    { "equation": "7 + 7", "op": "add", "answer": 14, "color": "#E53935" },
+    { "equation": "8 + 8", "op": "add", "answer": 16, "color": "#FDD835" },
+    { "equation": "11 + 11", "op": "add", "answer": 22, "color": "#43A047" },
+    { "equation": "14 + 14", "op": "add", "answer": 28, "color": "#1E88E5" }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "level_04",
+  "title": "Tree & Birds",
+  "image": "/assets/levels/level_04.svg",
+  "imageSize": { "width": 512, "height": 512 },
+  "regions": [
+    {
+      "id": "r_sun",
+      "label": 28,
+      "points": [
+        { "x": 48, "y": 40 },
+        { "x": 144, "y": 40 },
+        { "x": 144, "y": 136 },
+        { "x": 48, "y": 136 }
+      ]
+    },
+    {
+      "id": "r_foliage",
+      "label": 35,
+      "points": [
+        { "x": 100, "y": 108 },
+        { "x": 412, "y": 108 },
+        { "x": 412, "y": 300 },
+        { "x": 100, "y": 300 }
+      ]
+    },
+    {
+      "id": "r_trunk",
+      "label": 20,
+      "points": [
+        { "x": 220, "y": 288 },
+        { "x": 292, "y": 288 },
+        { "x": 292, "y": 444 },
+        { "x": 220, "y": 444 }
+      ]
+    },
+    {
+      "id": "r_bird_left",
+      "label": 8,
+      "points": [
+        { "x": 96, "y": 168 },
+        { "x": 168, "y": 168 },
+        { "x": 168, "y": 212 },
+        { "x": 96, "y": 212 }
+      ]
+    },
+    {
+      "id": "r_bird_right",
+      "label": 14,
+      "points": [
+        { "x": 352, "y": 148 },
+        { "x": 424, "y": 148 },
+        { "x": 424, "y": 192 },
+        { "x": 352, "y": 192 }
+      ]
+    }
+  ],
+  "tasks": [
+    { "equation": "12 + 8", "op": "add", "answer": 20, "color": "#E53935" },
+    { "equation": "18 + 17", "op": "add", "answer": 35, "color": "#FDD835" },
+    { "equation": "15 - 7", "op": "sub", "answer": 8, "color": "#43A047" },
+    { "equation": "25 - 11", "op": "sub", "answer": 14, "color": "#1E88E5" },
+    { "equation": "14 + 14", "op": "add", "answer": 28, "color": "#FB8C00" }
+  ]
+}

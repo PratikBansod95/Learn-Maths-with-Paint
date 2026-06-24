@@ -1,0 +1,19 @@
+{
+  "name": "learn-maths-with-paint",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "validate-levels": "tsx scripts/run-validate.ts",
+    "check-compliance": "tsx scripts/check-compliance.ts",
+    "analyze-bundle": "npm run build && tsx scripts/analyze-bundle.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

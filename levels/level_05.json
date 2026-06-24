@@ -1,0 +1,76 @@
+{
+  "id": "level_05",
+  "title": "Toy Room",
+  "image": "/assets/levels/level_05.svg",
+  "imageSize": { "width": 512, "height": 512 },
+  "regions": [
+    {
+      "id": "r_rug",
+      "label": 30,
+      "points": [
+        { "x": 40, "y": 348 },
+        { "x": 472, "y": 348 },
+        { "x": 472, "y": 456 },
+        { "x": 40, "y": 456 }
+      ]
+    },
+    {
+      "id": "r_blocks",
+      "label": 36,
+      "points": [
+        { "x": 208, "y": 172 },
+        { "x": 340, "y": 172 },
+        { "x": 340, "y": 300 },
+        { "x": 208, "y": 300 }
+      ]
+    },
+    {
+      "id": "r_train",
+      "label": 45,
+      "points": [
+        { "x": 36, "y": 284 },
+        { "x": 252, "y": 284 },
+        { "x": 252, "y": 356 },
+        { "x": 36, "y": 356 }
+      ]
+    },
+    {
+      "id": "r_ball",
+      "label": 12,
+      "points": [
+        { "x": 368, "y": 252 },
+        { "x": 456, "y": 252 },
+        { "x": 456, "y": 356 },
+        { "x": 368, "y": 356 }
+      ]
+    },
+    {
+      "id": "r_doll",
+      "label": 18,
+      "points": [
+        { "x": 320, "y": 248 },
+        { "x": 408, "y": 248 },
+        { "x": 408, "y": 388 },
+        { "x": 320, "y": 388 }
+      ]
+    },
+    {
+      "id": "r_teddy",
+      "label": 24,
+      "points": [
+        { "x": 68, "y": 228 },
+        { "x": 188, "y": 228 },
+        { "x": 188, "y": 372 },
+        { "x": 68, "y": 372 }
+      ]
+    }
+  ],
+  "tasks": [
+    { "equation": "15 + 9", "op": "add", "answer": 24, "color": "#E53935" },
+    { "equation": "20 + 16", "op": "add", "answer": 36, "color": "#FDD835" },
+    { "equation": "20 - 8", "op": "sub", "answer": 12, "color": "#43A047" },
+    { "equation": "50 - 5", "op": "sub", "answer": 45, "color": "#1E88E5" },
+    { "equation": "25 - 7", "op": "sub", "answer": 18, "color": "#FB8C00" },
+    { "equation": "15 + 15", "op": "add", "answer": 30, "color": "#8b5cf6" }
+  ]
+}

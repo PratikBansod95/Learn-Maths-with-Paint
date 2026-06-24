@@ -1,0 +1,54 @@
+{
+  "id": "level_01",
+  "title": "Sunny Cat",
+  "image": "/assets/levels/level_01.svg",
+  "imageSize": { "width": 512, "height": 512 },
+  "regions": [
+    {
+      "id": "r_sun",
+      "label": 18,
+      "points": [
+        { "x": 352, "y": 42 },
+        { "x": 448, "y": 42 },
+        { "x": 448, "y": 138 },
+        { "x": 352, "y": 138 }
+      ]
+    },
+    {
+      "id": "r_head",
+      "label": 8,
+      "points": [
+        { "x": 184, "y": 128 },
+        { "x": 328, "y": 128 },
+        { "x": 328, "y": 272 },
+        { "x": 184, "y": 272 }
+      ]
+    },
+    {
+      "id": "r_body",
+      "label": 15,
+      "points": [
+        { "x": 156, "y": 250 },
+        { "x": 356, "y": 250 },
+        { "x": 356, "y": 410 },
+        { "x": 156, "y": 410 }
+      ]
+    },
+    {
+      "id": "r_tail",
+      "label": 12,
+      "points": [
+        { "x": 72, "y": 288 },
+        { "x": 168, "y": 288 },
+        { "x": 168, "y": 408 },
+        { "x": 72, "y": 408 }
+      ]
+    }
+  ],
+  "tasks": [
+    { "equation": "5 + 3", "op": "add", "answer": 8, "color": "#E53935" },
+    { "equation": "7 + 5", "op": "add", "answer": 12, "color": "#FDD835" },
+    { "equation": "8 + 7", "op": "add", "answer": 15, "color": "#43A047" },
+    { "equation": "9 + 9", "op": "add", "answer": 18, "color": "#1E88E5" }
+  ]
+}

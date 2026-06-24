@@ -1,0 +1,65 @@
+{
+  "id": "level_03",
+  "title": "Little Car",
+  "image": "/assets/levels/level_03.svg",
+  "imageSize": { "width": 512, "height": 512 },
+  "regions": [
+    {
+      "id": "r_bumper",
+      "label": 15,
+      "points": [
+        { "x": 424, "y": 236 },
+        { "x": 480, "y": 236 },
+        { "x": 480, "y": 348 },
+        { "x": 424, "y": 348 }
+      ]
+    },
+    {
+      "id": "r_window",
+      "label": 12,
+      "points": [
+        { "x": 140, "y": 192 },
+        { "x": 276, "y": 192 },
+        { "x": 276, "y": 272 },
+        { "x": 140, "y": 272 }
+      ]
+    },
+    {
+      "id": "r_body",
+      "label": 18,
+      "points": [
+        { "x": 80, "y": 260 },
+        { "x": 428, "y": 260 },
+        { "x": 428, "y": 344 },
+        { "x": 80, "y": 344 }
+      ]
+    },
+    {
+      "id": "r_wheel_front",
+      "label": 5,
+      "points": [
+        { "x": 124, "y": 316 },
+        { "x": 212, "y": 316 },
+        { "x": 212, "y": 404 },
+        { "x": 124, "y": 404 }
+      ]
+    },
+    {
+      "id": "r_wheel_back",
+      "label": 8,
+      "points": [
+        { "x": 300, "y": 316 },
+        { "x": 388, "y": 316 },
+        { "x": 388, "y": 404 },
+        { "x": 300, "y": 404 }
+      ]
+    }
+  ],
+  "tasks": [
+    { "equation": "12 - 7", "op": "sub", "answer": 5, "color": "#E53935" },
+    { "equation": "15 - 7", "op": "sub", "answer": 8, "color": "#FDD835" },
+    { "equation": "20 - 8", "op": "sub", "answer": 12, "color": "#43A047" },
+    { "equation": "18 - 3", "op": "sub", "answer": 15, "color": "#1E88E5" },
+    { "equation": "20 - 2", "op": "sub", "answer": 18, "color": "#FB8C00" }
+  ]
+}
