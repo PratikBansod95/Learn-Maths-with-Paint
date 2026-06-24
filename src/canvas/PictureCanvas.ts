@@ -2,10 +2,11 @@ import type { LevelData, Point, Region } from '../game/types';
 import {
   easeOutBack,
   easeOutCubic,
+  boundsOf,
+  centroid,
   labelFontSize,
   pointInPolygon,
   tracePolygon,
-  centroid,
 } from './geometry';
 
 const FILL_DURATION_MS = 420;
@@ -279,12 +280,8 @@ export class PictureCanvas {
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    if (this.image) {
-      ctx.drawImage(this.image, 0, 0, imgW, imgH);
-    } else {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, imgW, imgH);
-    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, imgW, imgH);
 
     for (const region of this.level.regions) {
       const color = this.fillColor(region.id);
@@ -294,11 +291,25 @@ export class PictureCanvas {
       }
     }
 
+    if (this.image) {
+      ctx.drawImage(this.image, 0, 0, imgW, imgH);
+    } else {
+      for (const region of this.level.regions) {
+        if (this.isRegionLocked(region.id)) continue;
+        tracePolygon(ctx, region.points);
+        ctx.strokeStyle = '#2d3748';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+    }
+
     for (const region of this.level.regions) {
       if (this.isRegionLocked(region.id)) continue;
       const isHover = region.id === this.hoverRegionId;
       const isWrong = region.id === this.wrongRegionId && this.wrongAnim;
-      this.drawRegionOutline(region.points, isHover, !!isWrong);
+      if (isHover || isWrong) {
+        this.drawRegionOutline(region.points, isHover, !!isWrong);
+      }
     }
 
     for (const region of this.level.regions) {
@@ -308,31 +319,39 @@ export class PictureCanvas {
     ctx.restore();
   }
 
+  private shadeColor(hex: string, factor: number): string {
+    const n = hex.replace('#', '');
+    const r = Math.min(255, Math.round(parseInt(n.slice(0, 2), 16) * factor));
+    const g = Math.min(255, Math.round(parseInt(n.slice(2, 4), 16) * factor));
+    const b = Math.min(255, Math.round(parseInt(n.slice(4, 6), 16) * factor));
+    return `rgb(${r},${g},${b})`;
+  }
+
   private drawFill(points: Point[], color: string, progress: number): void {
     const { ctx } = this;
     const c = centroid(points);
+    const b = boundsOf(points);
     const eased = easeOutBack(Math.min(1, progress));
+    const radius = Math.max(b.width, b.height) * 0.58 * eased;
 
     ctx.save();
-    ctx.translate(c.x, c.y);
-    ctx.scale(eased, eased);
-    ctx.translate(-c.x, -c.y);
-
     tracePolygon(ctx, points);
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.92;
+    ctx.clip();
+
+    const grad = ctx.createRadialGradient(c.x, c.y, radius * 0.08, c.x, c.y, radius);
+    grad.addColorStop(0, color);
+    grad.addColorStop(0.72, color);
+    grad.addColorStop(1, this.shadeColor(color, 0.82));
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
-
-    tracePolygon(ctx, points);
-    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
 
     ctx.restore();
   }
 
-  private drawRegionOutline(points: Point[], hover: boolean, wrong: boolean): void {
+  private drawRegionOutline(points: Point[], _hover: boolean, wrong: boolean): void {
     const { ctx } = this;
     tracePolygon(ctx, points);
 
@@ -347,9 +366,9 @@ export class PictureCanvas {
       return;
     }
 
-    ctx.strokeStyle = hover ? '#8b5cf6' : '#2d3748';
-    ctx.lineWidth = hover ? 4 : 3;
-    ctx.setLineDash(hover ? [8, 6] : []);
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 6]);
     ctx.stroke();
     ctx.setLineDash([]);
   }
