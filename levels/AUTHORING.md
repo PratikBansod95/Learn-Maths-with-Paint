@@ -44,7 +44,7 @@ For a polished “paint by numbers” look, add a **colored reference** image al
 - Same dimensions and layout as line art (512×512 default).
 - PNG or SVG; keep PNG **&lt; 200 KB** when possible.
 - Omit `coloredImage` to use flat palette fills (levels 1–5 work this way).
-- See `level_06` for a working example.
+- See `level_01` for a working example.
 
 Replace `public/assets/levels/level_NN.svg` with your finished art. If using PNG:
 
@@ -118,9 +118,9 @@ Each region is a polygon in **image coordinates** (0–512):
 - [ ] `npm run validate-levels` passes
 - [ ] Play start → finish with 0–3 stars
 
-## Example: level_06 Butterfly Garden
+## Example: level_01 Sunny Cat
 
-See `levels/level_06.json` + `public/assets/levels/level_06.svg` + `level_06_colored.svg` for a complete custom level with HD texture fills.
+See `levels/level_01.json` + `public/assets/levels/level_01.png` + `level_01_colored.png` for a complete custom level with HD texture fills.
 
 ## Scaling to 30 levels
 
