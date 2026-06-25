@@ -2,7 +2,6 @@ import type { LevelData, Point, Region } from '../game/types';
 import {
   easeOutBack,
   easeOutCubic,
-  boundsOf,
   centroid,
   labelFontSize,
   pointInPolygon,
