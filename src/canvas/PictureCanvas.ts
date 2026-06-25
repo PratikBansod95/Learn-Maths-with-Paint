@@ -322,9 +322,14 @@ export class PictureCanvas {
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    this.drawPaperBackground(imgW, imgH);
+    if (this.coloredImage) {
+      this.drawGreyBase(imgW, imgH);
+    } else {
+      this.drawPaperBackground(imgW, imgH);
+    }
 
     if (this.coloredImage) {
+
       for (const region of this.level.regions) {
         if (this.isRegionLocked(region.id)) continue;
         if (region.id === this.hoverRegionId) {
@@ -334,7 +339,9 @@ export class PictureCanvas {
 
       for (const region of this.level.regions) {
         const progress = this.fillProgress(region.id);
-        this.drawRegionPixels(region.points, progress);
+        if (progress > 0) {
+          this.drawRegionColorReveal(region.points, progress);
+        }
       }
     } else {
       for (const region of this.level.regions) {
@@ -419,39 +426,34 @@ export class PictureCanvas {
     this.greyImage = canvas;
   }
 
-  /**
-   * Pro paint-by-number: clip region mask, show real art pixels (grey when empty, full color when filled).
-   */
-  private drawRegionPixels(points: Point[], progress: number): void {
+  /** Full-canvas grey reference — entire picture muted before any taps. */
+  private drawGreyBase(imgW: number, imgH: number): void {
+    const { ctx } = this;
+    if (this.greyImage) {
+      ctx.drawImage(this.greyImage, 0, 0, imgW, imgH);
+      return;
+    }
+    if (!this.coloredImage) return;
+    ctx.save();
+    ctx.filter = 'grayscale(1) brightness(1.14) contrast(0.88)';
+    ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
+    ctx.filter = 'none';
+    ctx.restore();
+  }
+
+  /** Uncover real color pixels inside the region mask (fade in, no paint circles). */
+  private drawRegionColorReveal(points: Point[], progress: number): void {
     const { ctx } = this;
     const { imgW, imgH } = this.viewport;
     if (!this.coloredImage) return;
 
+    const alpha = progress >= 0.995 ? 1 : easeOutCubic(Math.min(1, progress));
+
     ctx.save();
     tracePolygon(ctx, points);
     ctx.clip();
-
-    if (this.greyImage) {
-      ctx.drawImage(this.greyImage, 0, 0, imgW, imgH);
-    }
-
-    if (progress > 0) {
-      const done = progress >= 0.995;
-      if (done) {
-        ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
-      } else {
-        const c = centroid(points);
-        const eased = easeOutCubic(Math.min(1, progress));
-        const radius = polygonCoverRadius(points, c) * easeOutBack(eased);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, Math.max(6, radius), 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
-        ctx.restore();
-      }
-    }
-
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
     ctx.restore();
   }
 
