@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 /** YouTube Playables SDK — minimal typings for V1 */
 interface YtGameEngagement {
   onPause(callback: () => void): void;

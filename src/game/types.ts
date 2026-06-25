@@ -21,7 +21,10 @@ export interface Task {
 export interface LevelData {
   id: string;
   title: string;
+  /** Line art only (outlines, transparent background). */
   image: string;
+  /** Full-color reference art aligned to `image` — enables HD texture fills. */
+  coloredImage?: string;
   imageSize?: { width: number; height: number };
   regions: Region[];
   tasks: Task[];
@@ -59,4 +62,5 @@ export const PALETTE_COLORS = [
   '#43A047',
   '#1E88E5',
   '#FB8C00',
+  '#8b5cf6',
 ] as const;

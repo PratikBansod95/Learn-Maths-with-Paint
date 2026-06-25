@@ -1,0 +1,21 @@
+{
+  "id": "level_XX",
+  "title": "Your Level Title",
+  "image": "assets/levels/level_XX.svg",
+  "imageSize": { "width": 512, "height": 512 },
+  "regions": [
+    {
+      "id": "r_part_a",
+      "label": 10,
+      "points": [
+        { "x": 100, "y": 100 },
+        { "x": 200, "y": 100 },
+        { "x": 200, "y": 200 },
+        { "x": 100, "y": 200 }
+      ]
+    }
+  ],
+  "tasks": [
+    { "equation": "5 + 5", "op": "add", "answer": 10, "color": "#E53935" }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "id": "level_03",
   "title": "Little Car",
-  "image": "/assets/levels/level_03.svg",
+  "image": "assets/levels/level_03.svg",
   "imageSize": { "width": 512, "height": 512 },
   "regions": [
     {

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#fef9c3"/>
+    </linearGradient>
+    <radialGradient id="sunFill" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#fb8c00"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <path d="M 60 400 Q 256 440 452 400 L 452 512 L 60 512 Z" fill="#86efac"/>
+  <path d="M 80 400 Q 128 380 176 392 Q 256 420 336 392 Q 384 380 432 400" fill="none" stroke="#4ade80" stroke-width="8" opacity="0.5"/>
+  <circle cx="356" cy="56" r="44" fill="url(#sunFill)"/>
+  <ellipse cx="120" cy="200" rx="50" ry="54" transform="rotate(-18 120 200)" fill="#fdd835"/>
+  <ellipse cx="120" cy="200" rx="30" ry="34" transform="rotate(-18 120 200)" fill="#fbbf24" opacity="0.6"/>
+  <ellipse cx="336" cy="200" rx="50" ry="54" transform="rotate(18 336 200)" fill="#60a5fa"/>
+  <ellipse cx="336" cy="200" rx="30" ry="34" transform="rotate(18 336 200)" fill="#3b82f6" opacity="0.5"/>
+  <ellipse cx="256" cy="224" rx="16" ry="74" fill="#43a047"/>
+  <circle cx="256" cy="148" r="20" fill="#2e7d32"/>
+  <path d="M 128 352 C 104 352 88 336 88 320 C 88 300 104 288 128 288 C 152 288 168 300 168 320 C 168 336 152 352 128 352 Z" fill="#ef4444"/>
+  <circle cx="128" cy="320" r="22" fill="#dc2626"/>
+  <rect x="124" y="352" width="8" height="48" fill="#16a34a"/>
+</svg>

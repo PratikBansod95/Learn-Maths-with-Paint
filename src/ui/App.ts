@@ -1,6 +1,6 @@
 import type { AppScreen, SaveData } from '../game/types';
-import { PALETTE_COLORS } from '../game/types';
 import { GameController, calcStars } from '../game/GameController';
+import { getPaletteColors } from '../game/palette';
 import { getLevel, getLevelCount } from '../game/levels';
 import { PictureCanvas } from '../canvas/PictureCanvas';
 import { audio } from '../effects/audio';
@@ -148,6 +148,7 @@ export class App {
       }
 
       this.showToast("Oops! That's not correct.");
+      this.shakeCanvas();
       this.renderPlayingShell();
       this.animateLifeLost(livesBefore);
       return;
@@ -179,6 +180,35 @@ export class App {
     this.animateTaskAdvance();
   }
 
+  private shakeCanvas(): void {
+    const wrap = this.root.querySelector('.canvas-wrap');
+    if (!wrap) return;
+    wrap.classList.remove('canvas-wrap--shake');
+    void (wrap as HTMLElement).offsetWidth;
+    wrap.classList.add('canvas-wrap--shake');
+    window.setTimeout(() => wrap.classList.remove('canvas-wrap--shake'), 480);
+  }
+
+  private renderPaletteHtml(level: ReturnType<typeof getLevel>, selected: string | null): string {
+    if (!level) return '';
+    return getPaletteColors(level)
+      .map(
+        (c) => `
+        <button
+          class="palette-swatch ${selected === c ? 'palette-swatch--selected' : ''}"
+          style="--swatch:${c}"
+          data-color="${c}"
+          aria-label="Color ${c}"
+        ></button>`,
+      )
+      .join('');
+  }
+
+  private progressPercent(filled: number, total: number): number {
+    if (total <= 0) return 0;
+    return Math.round((filled / total) * 100);
+  }
+
   private animateLifeLost(livesBefore: number): void {
     const hearts = this.root.querySelectorAll('.heart');
     const lostIndex = livesBefore - 1;
@@ -191,11 +221,14 @@ export class App {
   private animateTaskAdvance(): void {
     const panel = this.root.querySelector('.equation-panel');
     const badge = this.root.querySelector('.progress-badge');
+    const track = this.root.querySelector('.progress-fill');
     panel?.classList.remove('equation-panel--pop');
     badge?.classList.remove('progress-badge--pop');
     void (panel as HTMLElement | null)?.offsetWidth;
     panel?.classList.add('equation-panel--pop');
     badge?.classList.add('progress-badge--pop');
+    track?.classList.add('progress-fill--pop');
+    window.setTimeout(() => track?.classList.remove('progress-fill--pop'), 400);
   }
 
   private showToast(message: string): void {
@@ -235,6 +268,7 @@ export class App {
     this.root.innerHTML = `
       <div class="screen screen--loading screen-enter">
         <div class="loader-card">
+          <div class="loader-art" aria-hidden="true">🎨</div>
           <div class="loader-spinner"></div>
           <h1>Learn Maths with Paint</h1>
           <p>Loading…</p>
@@ -247,10 +281,15 @@ export class App {
     this.root.innerHTML = `
       <div class="screen screen--title screen-enter">
         <div class="title-card">
+          <div class="title-art" aria-hidden="true">
+            <span class="title-art__blob title-art__blob--1"></span>
+            <span class="title-art__blob title-art__blob--2"></span>
+            <span class="title-art__icon">🎨</span>
+          </div>
           <h1>Learn Maths with Paint</h1>
           <p class="subtitle">Solve &amp; color the matching numbers!</p>
-          <button class="btn btn--primary" id="btn-play">Play</button>
-          <p class="level-unlock">Levels unlocked: ${unlocked}/${getLevelCount()}</p>
+          <button class="btn btn--primary btn--play" id="btn-play">▶ Play</button>
+          <div class="level-unlock-badge">Levels unlocked: ${unlocked}/${getLevelCount()}</div>
           <p class="publisher">By Learn Maths with Paint</p>
         </div>
       </div>`;
@@ -270,15 +309,9 @@ export class App {
       .map((i) => `<span class="heart ${i < state.lives ? 'heart--full' : 'heart--empty'}">♥</span>`)
       .join('');
 
-    const palette = PALETTE_COLORS.map(
-      (c) => `
-        <button
-          class="palette-swatch ${state.selectedColor === c ? 'palette-swatch--selected' : ''}"
-          style="--swatch:${c}"
-          data-color="${c}"
-          aria-label="Color ${c}"
-        ></button>`,
-    ).join('');
+    const palette = this.renderPaletteHtml(level, state.selectedColor);
+    const progressPct = this.progressPercent(state.filledCount, state.totalTasks);
+    const taskColor = task?.color ?? '#8b5cf6';
 
     const wasPlaying = this.root.querySelector('#picture-canvas');
 
@@ -291,21 +324,30 @@ export class App {
             <div class="progress-badge">${state.filledCount}/${state.totalTasks}</div>
           </header>
 
-          <section class="equation-panel">
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" style="width:${progressPct}%"></div>
+          </div>
+
+          <section class="equation-panel" style="--task-accent:${taskColor}">
             <div class="equation-row">
               <span class="equation">${task?.equation ?? ''} = ?</span>
-              <span class="equation-swatch" style="background:${task?.color ?? '#ccc'}"></span>
+              <span class="equation-swatch" style="background:${taskColor}"></span>
             </div>
             <p class="hint">Solve and color the area with the answer!</p>
           </section>
 
-          <p class="level-title">${level.title}</p>
+          <p class="level-title"><span class="level-title__pill">${level.title}</span></p>
 
           <div class="canvas-wrap">
-            <canvas id="picture-canvas"></canvas>
+            <div class="canvas-frame">
+              <canvas id="picture-canvas"></canvas>
+            </div>
           </div>
 
-          <div class="palette">${palette}</div>
+          <div class="palette-panel">
+            <p class="palette-label">Pick your color</p>
+            <div class="palette">${palette}</div>
+          </div>
           <div id="toast" class="toast" role="status"></div>
         </div>`;
 
@@ -331,13 +373,17 @@ export class App {
     } else {
       const livesEl = this.root.querySelector('.lives');
       const progressEl = this.root.querySelector('.progress-badge');
+      const progressFill = this.root.querySelector<HTMLElement>('.progress-fill');
       const equationEl = this.root.querySelector('.equation');
       const swatchEl = this.root.querySelector<HTMLElement>('.equation-swatch');
+      const equationPanel = this.root.querySelector<HTMLElement>('.equation-panel');
 
       if (livesEl) livesEl.innerHTML = hearts;
       if (progressEl) progressEl.textContent = `${state.filledCount}/${state.totalTasks}`;
+      if (progressFill) progressFill.style.width = `${progressPct}%`;
       if (equationEl && task) equationEl.textContent = `${task.equation} = ?`;
       if (swatchEl && task) swatchEl.style.background = task.color;
+      if (equationPanel && task) equationPanel.style.setProperty('--task-accent', task.color);
 
       this.root.querySelectorAll('.palette-swatch').forEach((btn) => {
         const color = (btn as HTMLElement).dataset.color ?? '';

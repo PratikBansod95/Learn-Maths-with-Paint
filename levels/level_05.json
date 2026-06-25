@@ -1,7 +1,7 @@
 {
   "id": "level_05",
   "title": "Toy Room",
-  "image": "/assets/levels/level_05.svg",
+  "image": "assets/levels/level_05.svg",
   "imageSize": { "width": 512, "height": 512 },
   "regions": [
     {

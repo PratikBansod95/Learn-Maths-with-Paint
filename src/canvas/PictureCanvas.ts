@@ -24,6 +24,17 @@ interface WrongAnim {
   duration: number;
 }
 
+interface Sparkle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+}
+
 interface Viewport {
   scale: number;
   offsetX: number;
@@ -41,7 +52,9 @@ export class PictureCanvas {
   private wrongAnim: WrongAnim | null = null;
   private wrongRegionId: string | null = null;
   private hoverRegionId: string | null = null;
+  private readonly sparkles: Sparkle[] = [];
   private image: HTMLImageElement | null = null;
+  private coloredImage: HTMLImageElement | null = null;
   private viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0, imgW: 512, imgH: 512 };
   private rafId = 0;
   private paused = false;
@@ -67,16 +80,27 @@ export class PictureCanvas {
     this.wrongAnim = null;
     this.wrongRegionId = null;
     this.hoverRegionId = null;
+    this.sparkles.length = 0;
 
     const imgW = level.imageSize?.width ?? 512;
     const imgH = level.imageSize?.height ?? 512;
     this.viewport.imgW = imgW;
     this.viewport.imgH = imgH;
 
-    this.image = await this.loadImage(level.image).catch(() => null);
-    if (this.image?.naturalWidth) {
-      this.viewport.imgW = this.image.naturalWidth;
-      this.viewport.imgH = this.image.naturalHeight;
+    const [line, colored] = await Promise.all([
+      this.loadImage(level.image).catch(() => null),
+      level.coloredImage
+        ? this.loadImage(level.coloredImage).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    this.image = line;
+    this.coloredImage = colored;
+
+    const sizeFrom = line ?? colored;
+    if (sizeFrom?.naturalWidth) {
+      this.viewport.imgW = sizeFrom.naturalWidth;
+      this.viewport.imgH = sizeFrom.naturalHeight;
     }
 
     this.resize();
@@ -104,6 +128,7 @@ export class PictureCanvas {
     this.stopLoop();
     this.level = null;
     this.image = null;
+    this.coloredImage = null;
   }
 
   isInteracting(): boolean {
@@ -230,6 +255,8 @@ export class PictureCanvas {
       if (raw >= 1) {
         this.completedFills.set(regionId, anim.color);
         this.fillAnims.delete(regionId);
+        const region = this.level?.regions.find((r) => r.id === regionId);
+        if (region) this.spawnSparkles(region, anim.color);
         anim.resolve();
       } else {
         needsFrame = true;
@@ -244,6 +271,16 @@ export class PictureCanvas {
       } else {
         needsFrame = true;
       }
+    }
+
+    for (let i = this.sparkles.length - 1; i >= 0; i--) {
+      const s = this.sparkles[i];
+      s.life += 1;
+      s.x += s.vx;
+      s.y += s.vy;
+      s.vy += 0.12;
+      if (s.life >= s.maxLife) this.sparkles.splice(i, 1);
+      else needsFrame = true;
     }
 
     if (!needsFrame) this.interacting = false;
@@ -280,8 +317,14 @@ export class PictureCanvas {
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, imgW, imgH);
+    this.drawPaperBackground(imgW, imgH);
+
+    for (const region of this.level.regions) {
+      if (this.isRegionLocked(region.id)) continue;
+      if (region.id === this.hoverRegionId) {
+        this.drawHoverTint(region.points);
+      }
+    }
 
     for (const region of this.level.regions) {
       const color = this.fillColor(region.id);
@@ -316,7 +359,70 @@ export class PictureCanvas {
       this.drawLabel(region);
     }
 
+    this.drawSparkles();
+
     ctx.restore();
+  }
+
+  private drawPaperBackground(imgW: number, imgH: number): void {
+    const { ctx } = this;
+    const bg = ctx.createLinearGradient(0, 0, imgW, imgH);
+    bg.addColorStop(0, '#fffef9');
+    bg.addColorStop(0.5, '#ffffff');
+    bg.addColorStop(1, '#f5f0ff');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, imgW, imgH);
+
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    for (let x = 0; x < imgW; x += 24) {
+      for (let y = 0; y < imgH; y += 24) {
+        ctx.fillStyle = x % 48 === 0 ? '#8b5cf6' : '#22c55e';
+        ctx.fillRect(x, y, 2, 2);
+      }
+    }
+    ctx.restore();
+  }
+
+  private drawHoverTint(points: Point[]): void {
+    const { ctx } = this;
+    ctx.save();
+    tracePolygon(ctx, points);
+    ctx.fillStyle = 'rgba(139, 92, 246, 0.14)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  private spawnSparkles(region: Region, color: string): void {
+    const c = centroid(region.points);
+    for (let i = 0; i < 10; i++) {
+      const angle = (Math.PI * 2 * i) / 10 + Math.random() * 0.4;
+      const speed = 1.2 + Math.random() * 2.5;
+      this.sparkles.push({
+        x: c.x,
+        y: c.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        life: 0,
+        maxLife: 18 + Math.floor(Math.random() * 10),
+        color,
+        size: 3 + Math.random() * 3,
+      });
+    }
+  }
+
+  private drawSparkles(): void {
+    const { ctx } = this;
+    for (const s of this.sparkles) {
+      const alpha = 1 - s.life / s.maxLife;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = s.color;
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.life * 0.25);
+      ctx.fillRect(-s.size / 2, -s.size / 4, s.size, s.size / 2);
+      ctx.restore();
+    }
   }
 
   private shadeColor(hex: string, factor: number): string {
@@ -328,6 +434,33 @@ export class PictureCanvas {
   }
 
   private drawFill(points: Point[], color: string, progress: number): void {
+    if (this.coloredImage) {
+      this.drawTextureFill(points, progress);
+      return;
+    }
+    this.drawFlatFill(points, color, progress);
+  }
+
+  /** HD fill: clip region + reveal aligned reference artwork (BitmapShader equivalent). */
+  private drawTextureFill(points: Point[], progress: number): void {
+    const { ctx } = this;
+    const c = centroid(points);
+    const b = boundsOf(points);
+    const eased = easeOutCubic(Math.min(1, progress));
+    const radius = Math.max(b.width, b.height) * 0.62 * easeOutBack(eased);
+    const { imgW, imgH } = this.viewport;
+
+    ctx.save();
+    tracePolygon(ctx, points);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, Math.max(4, radius), 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(this.coloredImage!, 0, 0, imgW, imgH);
+    ctx.restore();
+  }
+
+  private drawFlatFill(points: Point[], color: string, progress: number): void {
     const { ctx } = this;
     const c = centroid(points);
     const b = boundsOf(points);
@@ -379,6 +512,10 @@ export class PictureCanvas {
     const filled = this.isRegionLocked(region.id);
     const fontSize = labelFontSize(region);
     const label = String(region.label);
+    const padX = fontSize * 0.38;
+    const padY = fontSize * 0.28;
+    const textW = fontSize * label.length * 0.58 + padX * 2;
+    const textH = fontSize + padY * 2;
 
     ctx.font = `800 ${fontSize}px Nunito, sans-serif`;
     ctx.textAlign = 'center';
@@ -397,10 +534,25 @@ export class PictureCanvas {
       ctx.stroke();
     }
 
-    ctx.lineWidth = Math.max(3, fontSize * 0.16);
-    ctx.strokeStyle = filled ? 'rgba(0,0,0,0.35)' : '#ffffff';
+    if (!filled) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.strokeStyle = 'rgba(45, 55, 72, 0.2)';
+      ctx.lineWidth = 2;
+      const rx = 8;
+      const x = c.x - textW / 2;
+      const y = c.y - textH / 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, textW, textH, rx);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.lineWidth = filled ? Math.max(3, fontSize * 0.14) : 0;
+    ctx.strokeStyle = filled ? 'rgba(0,0,0,0.35)' : 'transparent';
     ctx.fillStyle = filled ? '#ffffff' : '#1f2937';
-    ctx.strokeText(label, c.x, c.y);
+    if (filled) ctx.strokeText(label, c.x, c.y);
     ctx.fillText(label, c.x, c.y);
   }
 
@@ -413,12 +565,19 @@ export class PictureCanvas {
     };
   }
 
+  private resolveAssetUrl(src: string): string {
+    if (/^https?:\/\//.test(src) || src.startsWith('data:')) return src;
+    const base = import.meta.env.BASE_URL;
+    const path = src.replace(/^\//, '');
+    return `${base}${path}`;
+  }
+
   private loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error(`Failed to load ${src}`));
-      img.src = src;
+      img.src = this.resolveAssetUrl(src);
     });
   }
 }

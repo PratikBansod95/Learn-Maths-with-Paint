@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "validate-levels": "tsx scripts/run-validate.ts",
+    "new-level": "tsx scripts/create-level.ts",
     "check-compliance": "tsx scripts/check-compliance.ts",
     "analyze-bundle": "npm run build && tsx scripts/analyze-bundle.ts"
   },

@@ -1,7 +1,7 @@
 {
   "id": "level_04",
   "title": "Tree & Birds",
-  "image": "/assets/levels/level_04.svg",
+  "image": "assets/levels/level_04.svg",
   "imageSize": { "width": 512, "height": 512 },
   "regions": [
     {
