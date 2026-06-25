@@ -6,6 +6,7 @@ import {
   centroid,
   labelFontSize,
   pointInPolygon,
+  polygonCoverRadius,
   tracePolygon,
 } from './geometry';
 
@@ -318,6 +319,7 @@ export class PictureCanvas {
     ctx.scale(scale, scale);
 
     this.drawPaperBackground(imgW, imgH);
+    this.drawColoredUnderlay(imgW, imgH);
 
     for (const region of this.level.regions) {
       if (this.isRegionLocked(region.id)) continue;
@@ -384,6 +386,16 @@ export class PictureCanvas {
     ctx.restore();
   }
 
+  /** Faint color guide so unfilled areas aren't harsh white. */
+  private drawColoredUnderlay(imgW: number, imgH: number): void {
+    if (!this.coloredImage) return;
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalAlpha = 0.2;
+    ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
+    ctx.restore();
+  }
+
   private drawHoverTint(points: Point[]): void {
     const { ctx } = this;
     ctx.save();
@@ -444,42 +456,52 @@ export class PictureCanvas {
   /** HD fill: clip region + reveal aligned reference artwork (BitmapShader equivalent). */
   private drawTextureFill(points: Point[], progress: number): void {
     const { ctx } = this;
-    const c = centroid(points);
-    const b = boundsOf(points);
-    const eased = easeOutCubic(Math.min(1, progress));
-    const radius = Math.max(b.width, b.height) * 0.62 * easeOutBack(eased);
     const { imgW, imgH } = this.viewport;
+    const done = progress >= 0.995;
 
     ctx.save();
     tracePolygon(ctx, points);
     ctx.clip();
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, Math.max(4, radius), 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(this.coloredImage!, 0, 0, imgW, imgH);
+
+    if (done) {
+      ctx.drawImage(this.coloredImage!, 0, 0, imgW, imgH);
+    } else {
+      const c = centroid(points);
+      const eased = easeOutCubic(Math.min(1, progress));
+      const radius = polygonCoverRadius(points, c) * easeOutBack(eased);
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, Math.max(6, radius), 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(this.coloredImage!, 0, 0, imgW, imgH);
+    }
+
     ctx.restore();
   }
 
   private drawFlatFill(points: Point[], color: string, progress: number): void {
     const { ctx } = this;
     const c = centroid(points);
-    const b = boundsOf(points);
+    const done = progress >= 0.995;
     const eased = easeOutBack(Math.min(1, progress));
-    const radius = Math.max(b.width, b.height) * 0.58 * eased;
+    const radius = polygonCoverRadius(points, c) * eased;
 
     ctx.save();
     tracePolygon(ctx, points);
     ctx.clip();
 
-    const grad = ctx.createRadialGradient(c.x, c.y, radius * 0.08, c.x, c.y, radius);
-    grad.addColorStop(0, color);
-    grad.addColorStop(0.72, color);
-    grad.addColorStop(1, this.shadeColor(color, 0.82));
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
-    ctx.fill();
+    if (done) {
+      ctx.fillStyle = color;
+      ctx.fill();
+    } else {
+      const grad = ctx.createRadialGradient(c.x, c.y, radius * 0.08, c.x, c.y, radius);
+      grad.addColorStop(0, color);
+      grad.addColorStop(0.72, color);
+      grad.addColorStop(1, this.shadeColor(color, 0.82));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }

@@ -61,6 +61,14 @@ export function labelFontSize(region: Region): number {
   return Math.max(18, Math.min(36, base));
 }
 
+export function polygonCoverRadius(points: Point[], center: Point): number {
+  let maxD = 0;
+  for (const p of points) {
+    maxD = Math.max(maxD, Math.hypot(p.x - center.x, p.y - center.y));
+  }
+  return maxD * 1.08;
+}
+
 export function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }

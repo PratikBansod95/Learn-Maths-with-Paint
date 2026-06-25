@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-import os
+import math
 from pathlib import Path
 
 import cv2
@@ -24,19 +24,34 @@ COLOR_SRC = ASSETS_IN / (
 OUT_DIR = ROOT / "public" / "assets" / "levels"
 SIZE = 1024
 
-# Seed points (x, y) in 1024 space — tuned for Sunny Cat layout
-REGION_SEEDS: list[dict] = [
-    {"id": "r_sun", "label": 18, "seed": (118, 118), "tol": 45},
-    {"id": "r_flower_pink", "label": 6, "seed": (160, 520), "tol": 32},
-    {"id": "r_flower_purple", "label": 10, "seed": (248, 748), "tol": 35},
-    {"id": "r_flower_blue", "label": 14, "seed": (880, 520), "tol": 32},
-    {"id": "r_flower_yellow", "label": 16, "seed": (860, 810), "tol": 35},
-    {"id": "r_tail", "label": 12, "seed": (710, 690), "tol": 28},
-    {"id": "r_head", "label": 8, "seed": (512, 360), "tol": 30},
-    {"id": "r_body", "label": 15, "seed": (512, 650), "tol": 32},
-]
 
-SKY_RGB = np.array([208, 237, 251], dtype=np.int16)
+def ellipse_points(
+    cx: float, cy: float, rx: float, ry: float, segments: int = 20, angle_deg: float = 0
+) -> list[dict[str, int]]:
+    a = math.radians(angle_deg)
+    ca, sa = math.cos(a), math.sin(a)
+    pts: list[dict[str, int]] = []
+    for i in range(segments):
+        t = 2 * math.pi * i / segments
+        lx = rx * math.cos(t)
+        ly = ry * math.sin(t)
+        x = cx + lx * ca - ly * sa
+        y = cy + lx * sa + ly * ca
+        pts.append({"x": int(round(x)), "y": int(round(y))})
+    return pts
+
+
+# Hand-tuned tap targets aligned to the AI art (1024 canvas)
+REGIONS: list[dict] = [
+    {"id": "r_sun", "label": 18, "points": ellipse_points(130, 130, 80, 80)},
+    {"id": "r_flower_pink", "label": 6, "points": ellipse_points(168, 505, 62, 68)},
+    {"id": "r_flower_purple", "label": 10, "points": ellipse_points(248, 730, 55, 60)},
+    {"id": "r_flower_blue", "label": 14, "points": ellipse_points(862, 495, 62, 68)},
+    {"id": "r_flower_yellow", "label": 16, "points": ellipse_points(858, 792, 52, 56)},
+    {"id": "r_tail", "label": 12, "points": ellipse_points(688, 668, 75, 100, angle_deg=32)},
+    {"id": "r_head", "label": 8, "points": ellipse_points(512, 295, 122, 112)},
+    {"id": "r_body", "label": 15, "points": ellipse_points(512, 568, 138, 122)},
+]
 
 
 def make_line_art_transparent(src: Path, dst: Path) -> None:
@@ -54,7 +69,7 @@ def make_line_art_transparent(src: Path, dst: Path) -> None:
     _, mask = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
     mask = cv2.dilate(mask, np.ones((2, 2), np.uint8), iterations=1)
     data[:, :, 3] = mask
-    data[mask == 0, :3] = 0
+    data[mask > 0, 0:3] = 0
     Image.fromarray(data).save(dst, optimize=True)
 
 
@@ -64,77 +79,10 @@ def save_colored(src: Path, dst: Path) -> None:
     im.save(dst, optimize=True, quality=88)
 
 
-def flood_region_mask(color_bgr: np.ndarray, seed: tuple[int, int], tol: int = 38) -> np.ndarray:
-    h, w = color_bgr.shape[:2]
-    x, y = seed
-    x = int(np.clip(x, 0, w - 1))
-    y = int(np.clip(y, 0, h - 1))
-    rgb = cv2.cvtColor(color_bgr, cv2.COLOR_BGR2RGB).astype(np.int16)
-    visited = np.zeros((h, w), np.uint8)
-    mask = np.zeros((h, w), np.uint8)
-    target = rgb[y, x]
-    stack = [(x, y)]
-
-    while stack:
-        cx, cy = stack.pop()
-        if visited[cy, cx]:
-            continue
-        visited[cy, cx] = 1
-        px = rgb[cy, cx]
-        if np.linalg.norm(px - SKY_RGB) < 22:
-            continue
-        if np.linalg.norm(px - target) > tol:
-            continue
-        mask[cy, cx] = 255
-        for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
-            if 0 <= nx < w and 0 <= ny < h and not visited[ny, nx]:
-                stack.append((nx, ny))
-    return mask
-
-
-def mask_to_polygon(mask: np.ndarray, min_area: int = 800) -> list[dict[str, int]] | None:
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        return None
-    contour = max(contours, key=cv2.contourArea)
-    if cv2.contourArea(contour) < min_area:
-        return None
-    epsilon = 0.012 * cv2.arcLength(contour, True)
-    approx = cv2.approxPolyDP(contour, epsilon, True)
-    if len(approx) < 3:
-        return None
-    if len(approx) > 24:
-        epsilon = 0.02 * cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, epsilon, True)
-    points = [{"x": int(p[0][0]), "y": int(p[0][1])} for p in approx]
-    return points
-
-
-def build_regions(color_path: Path) -> list[dict]:
-    color_bgr = cv2.imread(str(color_path))
-    regions: list[dict] = []
-    used_mask = np.zeros(color_bgr.shape[:2], np.uint8)
-
-    for spec in REGION_SEEDS:
-        tol = spec.get("tol", 38)
-        mask = flood_region_mask(color_bgr, spec["seed"], tol)
-        mask[used_mask > 0] = 0
-        if spec["id"].startswith("r_flower"):
-            kernel = np.ones((12, 12), np.uint8)
-            mask = cv2.dilate(mask, kernel, iterations=1)
-            mask[used_mask > 0] = 0
-        points = mask_to_polygon(mask)
-        if not points:
-            print(f"WARN: could not extract region {spec['id']}, retrying with wider tol")
-            mask = flood_region_mask(color_bgr, spec["seed"], tol + 12)
-            mask[used_mask > 0] = 0
-            points = mask_to_polygon(mask, min_area=400)
-        if not points:
-            raise RuntimeError(f"Failed to build region {spec['id']}")
-        used_mask = cv2.bitwise_or(used_mask, mask)
-        regions.append({"id": spec["id"], "label": spec["label"], "points": points})
-        print(f"  {spec['id']}: {len(points)} points, label {spec['label']}")
-    return regions
+def build_regions() -> list[dict]:
+    for r in REGIONS:
+        print(f"  {r['id']}: {len(r['points'])} points, label {r['label']}")
+    return REGIONS
 
 
 def write_debug(color_path: Path, regions: list[dict], dst: Path) -> None:
@@ -159,7 +107,7 @@ def main() -> None:
     print("Saving colored art...")
     save_colored(COLOR_SRC, color_out)
     print("Extracting regions...")
-    regions = build_regions(color_out)
+    regions = build_regions()
     write_debug(color_out, regions, debug_out)
 
     level = {
