@@ -55,6 +55,8 @@ export class PictureCanvas {
   private readonly sparkles: Sparkle[] = [];
   private image: HTMLImageElement | null = null;
   private coloredImage: HTMLImageElement | null = null;
+  /** Desaturated copy of colored art — unfilled region preview (layer 1, muted). */
+  private greyImage: HTMLCanvasElement | null = null;
   private viewport: Viewport = { scale: 1, offsetX: 0, offsetY: 0, imgW: 512, imgH: 512 };
   private rafId = 0;
   private paused = false;
@@ -103,6 +105,8 @@ export class PictureCanvas {
       this.viewport.imgH = sizeFrom.naturalHeight;
     }
 
+    this.buildGreyImage();
+
     this.resize();
     this.draw();
   }
@@ -129,6 +133,7 @@ export class PictureCanvas {
     this.level = null;
     this.image = null;
     this.coloredImage = null;
+    this.greyImage = null;
   }
 
   isInteracting(): boolean {
@@ -318,20 +323,33 @@ export class PictureCanvas {
     ctx.scale(scale, scale);
 
     this.drawPaperBackground(imgW, imgH);
-    this.drawColoredUnderlay(imgW, imgH);
 
-    for (const region of this.level.regions) {
-      if (this.isRegionLocked(region.id)) continue;
-      if (region.id === this.hoverRegionId) {
-        this.drawHoverTint(region.points);
+    if (this.coloredImage) {
+      for (const region of this.level.regions) {
+        if (this.isRegionLocked(region.id)) continue;
+        if (region.id === this.hoverRegionId) {
+          this.drawHoverTint(region.points);
+        }
       }
-    }
 
-    for (const region of this.level.regions) {
-      const color = this.fillColor(region.id);
-      const progress = this.fillProgress(region.id);
-      if (color && progress > 0) {
-        this.drawFill(region.points, color, progress);
+      for (const region of this.level.regions) {
+        const progress = this.fillProgress(region.id);
+        this.drawRegionPixels(region.points, progress);
+      }
+    } else {
+      for (const region of this.level.regions) {
+        if (this.isRegionLocked(region.id)) continue;
+        if (region.id === this.hoverRegionId) {
+          this.drawHoverTint(region.points);
+        }
+      }
+
+      for (const region of this.level.regions) {
+        const color = this.fillColor(region.id);
+        const progress = this.fillProgress(region.id);
+        if (color && progress > 0) {
+          this.drawFlatFill(region.points, color, progress);
+        }
       }
     }
 
@@ -385,13 +403,55 @@ export class PictureCanvas {
     ctx.restore();
   }
 
-  /** Faint color guide so unfilled areas aren't harsh white. */
-  private drawColoredUnderlay(imgW: number, imgH: number): void {
-    if (!this.coloredImage) return;
+  private buildGreyImage(): void {
+    if (!this.coloredImage) {
+      this.greyImage = null;
+      return;
+    }
+    const { imgW, imgH } = this.viewport;
+    const canvas = document.createElement('canvas');
+    canvas.width = imgW;
+    canvas.height = imgH;
+    const g = canvas.getContext('2d');
+    if (!g) return;
+    g.filter = 'grayscale(1) brightness(1.14) contrast(0.88)';
+    g.drawImage(this.coloredImage, 0, 0, imgW, imgH);
+    this.greyImage = canvas;
+  }
+
+  /**
+   * Pro paint-by-number: clip region mask, show real art pixels (grey when empty, full color when filled).
+   */
+  private drawRegionPixels(points: Point[], progress: number): void {
     const { ctx } = this;
+    const { imgW, imgH } = this.viewport;
+    if (!this.coloredImage) return;
+
     ctx.save();
-    ctx.globalAlpha = 0.2;
-    ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
+    tracePolygon(ctx, points);
+    ctx.clip();
+
+    if (this.greyImage) {
+      ctx.drawImage(this.greyImage, 0, 0, imgW, imgH);
+    }
+
+    if (progress > 0) {
+      const done = progress >= 0.995;
+      if (done) {
+        ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
+      } else {
+        const c = centroid(points);
+        const eased = easeOutCubic(Math.min(1, progress));
+        const radius = polygonCoverRadius(points, c) * easeOutBack(eased);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, Math.max(6, radius), 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(this.coloredImage, 0, 0, imgW, imgH);
+        ctx.restore();
+      }
+    }
+
     ctx.restore();
   }
 
@@ -442,39 +502,6 @@ export class PictureCanvas {
     const g = Math.min(255, Math.round(parseInt(n.slice(2, 4), 16) * factor));
     const b = Math.min(255, Math.round(parseInt(n.slice(4, 6), 16) * factor));
     return `rgb(${r},${g},${b})`;
-  }
-
-  private drawFill(points: Point[], color: string, progress: number): void {
-    if (this.coloredImage) {
-      this.drawTextureFill(points, progress);
-      return;
-    }
-    this.drawFlatFill(points, color, progress);
-  }
-
-  /** HD fill: clip region + reveal aligned reference artwork (BitmapShader equivalent). */
-  private drawTextureFill(points: Point[], progress: number): void {
-    const { ctx } = this;
-    const { imgW, imgH } = this.viewport;
-    const done = progress >= 0.995;
-
-    ctx.save();
-    tracePolygon(ctx, points);
-    ctx.clip();
-
-    if (done) {
-      ctx.drawImage(this.coloredImage!, 0, 0, imgW, imgH);
-    } else {
-      const c = centroid(points);
-      const eased = easeOutCubic(Math.min(1, progress));
-      const radius = polygonCoverRadius(points, c) * easeOutBack(eased);
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, Math.max(6, radius), 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(this.coloredImage!, 0, 0, imgW, imgH);
-    }
-
-    ctx.restore();
   }
 
   private drawFlatFill(points: Point[], color: string, progress: number): void {
@@ -529,8 +556,9 @@ export class PictureCanvas {
 
   private drawLabel(region: Region): void {
     const { ctx } = this;
+    if (this.isRegionLocked(region.id)) return;
+
     const c = centroid(region.points);
-    const filled = this.isRegionLocked(region.id);
     const fontSize = labelFontSize(region);
     const label = String(region.label);
     const padX = fontSize * 0.38;
@@ -555,25 +583,18 @@ export class PictureCanvas {
       ctx.stroke();
     }
 
-    if (!filled) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-      ctx.strokeStyle = 'rgba(45, 55, 72, 0.2)';
-      ctx.lineWidth = 2;
-      const rx = 8;
-      const x = c.x - textW / 2;
-      const y = c.y - textH / 2;
-      ctx.beginPath();
-      ctx.roundRect(x, y, textW, textH, rx);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.strokeStyle = 'rgba(45, 55, 72, 0.2)';
+    ctx.lineWidth = 2;
+    const rx = 8;
+    const x = c.x - textW / 2;
+    const y = c.y - textH / 2;
+    ctx.beginPath();
+    ctx.roundRect(x, y, textW, textH, rx);
+    ctx.fill();
+    ctx.stroke();
 
-    ctx.lineWidth = filled ? Math.max(3, fontSize * 0.14) : 0;
-    ctx.strokeStyle = filled ? 'rgba(0,0,0,0.35)' : 'transparent';
-    ctx.fillStyle = filled ? '#ffffff' : '#1f2937';
-    if (filled) ctx.strokeText(label, c.x, c.y);
+    ctx.fillStyle = '#1f2937';
     ctx.fillText(label, c.x, c.y);
   }
 
